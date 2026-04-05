@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: book-recom-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter           # Starter (1 GB RAM) needed for training at build time
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
