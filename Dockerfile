@@ -1,23 +1,23 @@
-# ── Stage: Build & Train ──────────────────────────────────────────────────────
-FROM python:3.11-slim
-
-# Install system deps needed by numpy/pandas/scikit-learn
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install Python dependencies first (layer-cached)
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Install dependencies first (to cache this layer)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source & dataset
+# Pre-download required NLTK datasets for textblob and training script safety
+RUN python -m nltk.downloader punkt punkt_tab stopwords wordnet omw-1.4
+
+# Copy the application code
 COPY . .
 
-# Train the model at build time → artifacts stored in /app/model/
-RUN python train.py
+# Expose Hugging Face Space's default PORT
+ENV PORT=7860
+EXPOSE 7860
 
-# ── Runtime ───────────────────────────────────────────────────────────────────
-EXPOSE 5000
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "120", "--workers", "2", "app:app"]
+# Run with Gunicorn (1 worker, 2 threads to keep minimal RAM footprint)
+CMD gunicorn --bind 0.0.0.0:$PORT -w 1 --threads 2 "app:app"

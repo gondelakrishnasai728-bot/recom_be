@@ -1,29 +1,7 @@
-# Model artifacts (generated at build time by train.py — do NOT commit)
-model/
-nltk_data/
-
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Virtual environments
 venv/
-env/
-.venv/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-
-# Logs
-*.log
-*.tmp
-
-# Env files
+__pycache__/
+*.pyc
 .env
-.env.*
+goodreads_data.xlsx
+nltk_data/
+.pytest_cache/

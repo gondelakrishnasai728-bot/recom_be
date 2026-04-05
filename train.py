@@ -46,11 +46,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 # ─── Paths ────────────────────────────────────────────────────────────────────
 BASE_DIR    = os.path.dirname(os.path.abspath(__file__))
 DATASET     = os.path.join(BASE_DIR, 'goodreads_data.xlsx')
-MODEL_DIR   = os.path.join(BASE_DIR, 'model')
+MODEL_DIR   = os.path.join(os.path.dirname(__file__), 'model')
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 VECTORIZER_PATH = os.path.join(MODEL_DIR, 'tfidf_vectorizer.joblib')
-COSINE_SIM_PATH = os.path.join(MODEL_DIR, 'cosine_sim.npy')
+TFIDF_MATRIX_PATH = os.path.join(MODEL_DIR, 'tfidf_matrix.joblib')
 DATAFRAME_PATH  = os.path.join(MODEL_DIR, 'books_df.pkl')
 
 # ─── NLP Tools ────────────────────────────────────────────────────────────────
@@ -115,10 +115,8 @@ vectorizer = TfidfVectorizer(
 tfidf_matrix = vectorizer.fit_transform(df['processed'])
 print(f"   ✔ TF-IDF matrix shape: {tfidf_matrix.shape}")
 
-# ─── Cosine Similarity Matrix ─────────────────────────────────────────────────
-print("\n⚙️  Computing cosine similarity matrix… (this may take a moment)")
-cosine_sim = cosine_similarity(tfidf_matrix, tfidf_matrix)
-print(f"   ✔ Similarity matrix shape: {cosine_sim.shape}")
+# ─── Cosine Similarity matrix is no longer pre-computed to save RAM ──────
+print("\n⚙️  Skipping dense cosine_sim matrix to save memory! Will be computed dynamically.")
 
 # ─── Pre-compute Sentiment Scores ────────────────────────────────────────────
 # Computing TextBlob polarity here once avoids expensive per-request calls.
@@ -138,10 +136,10 @@ print(f"   ✔ Sentiment scores → {SENTIMENT_PATH}")
 # ─── Save Artifacts ───────────────────────────────────────────────────────────
 print("\n💾 Saving model artifacts…")
 joblib.dump(vectorizer, VECTORIZER_PATH)
-np.save(COSINE_SIM_PATH, cosine_sim)
+joblib.dump(tfidf_matrix, TFIDF_MATRIX_PATH)
 df.to_pickle(DATAFRAME_PATH)
 
-print(f"   ✔ Vectorizer  → {VECTORIZER_PATH}")
-print(f"   ✔ Cosine sim  → {COSINE_SIM_PATH}")
-print(f"   ✔ DataFrame   → {DATAFRAME_PATH}")
+print(f"   ✔ Vectorizer     → {VECTORIZER_PATH}")
+print(f"   ✔ TF-IDF Matrix  → {TFIDF_MATRIX_PATH}")
+print(f"   ✔ DataFrame      → {DATAFRAME_PATH}")
 print("\n✅ Training complete! You can now start app.py.\n")

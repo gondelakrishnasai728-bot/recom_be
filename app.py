@@ -16,20 +16,21 @@ import pandas as pd
 import joblib
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
 CORS(app)
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
 MODEL_DIR       = os.path.join(os.path.dirname(__file__), 'model')
-VECTORIZER_PATH = os.path.join(MODEL_DIR, 'tfidf_vectorizer.joblib')
-COSINE_SIM_PATH = os.path.join(MODEL_DIR, 'cosine_sim.npy')
+VECTORIZER_PATH   = os.path.join(MODEL_DIR, 'tfidf_vectorizer.joblib')
+TFIDF_MATRIX_PATH = os.path.join(MODEL_DIR, 'tfidf_matrix.joblib')
 DATAFRAME_PATH  = os.path.join(MODEL_DIR, 'books_df.pkl')
 SENTIMENT_PATH  = os.path.join(MODEL_DIR, 'sentiment_scores.npy')
 
 # ─── Load Pre-trained Model Artifacts ─────────────────────────────────────────
 def load_model():
-    required = [VECTORIZER_PATH, COSINE_SIM_PATH, DATAFRAME_PATH, SENTIMENT_PATH]
+    required = [VECTORIZER_PATH, TFIDF_MATRIX_PATH, DATAFRAME_PATH, SENTIMENT_PATH]
     missing  = [p for p in required if not os.path.exists(p)]
     if missing:
         print("[ERROR] Missing model artifacts – run backend/train.py first:")
@@ -39,7 +40,7 @@ def load_model():
 
     print("[INFO] Loading pre-trained model artifacts…")
     vectorizer     = joblib.load(VECTORIZER_PATH)
-    cosine_sim     = np.load(COSINE_SIM_PATH)          # shape (N, N) float32
+    tfidf_matrix   = joblib.load(TFIDF_MATRIX_PATH)     # sparse matrix
     df             = pd.read_pickle(DATAFRAME_PATH)
     sentiment_arr  = np.load(SENTIMENT_PATH)            # shape (N,)  float32
 
@@ -47,16 +48,16 @@ def load_model():
     sentiment_arr  = np.clip(sentiment_arr, 0.0, 1.0).astype('float32')
 
     print(f"[INFO] Model ready — {len(df):,} books loaded.")
-    return vectorizer, cosine_sim, df, sentiment_arr
+    return vectorizer, tfidf_matrix, df, sentiment_arr
 
-vectorizer, cosine_sim, df, sentiment_arr = load_model()
+vectorizer, tfidf_matrix, df, sentiment_arr = load_model()
 
 # Build a lowercased title series once for fast look-ups
 title_lower = df['Book'].str.lower() if df is not None else None
 
 # ─── Helper Functions ────────────────────────────────────────────────────────
 def _get_book_recommendations(book_idx, n):
-    sim  = cosine_sim[book_idx].astype('float32')     # (N,)
+    sim = cosine_similarity(tfidf_matrix[book_idx], tfidf_matrix).flatten().astype('float32')
     combined = 0.8 * sim + 0.2 * sentiment_arr        # element-wise, ultra-fast
     combined[book_idx] = -1.0 # Exclude the query book itself
 
@@ -177,5 +178,4 @@ def recommend_by_genre():
 
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(debug=True, port=5000)

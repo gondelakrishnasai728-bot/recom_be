@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+.git
+.gitignore
+.env
+goodreads_data.xlsx
+nltk_data/
